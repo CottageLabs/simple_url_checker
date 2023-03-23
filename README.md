@@ -10,6 +10,7 @@ How to run
 python3.11 -m venv ~/venv/simple-url-checker
 . ~/venv/simple-url-checker/bin/activate
 pip install -r requirements.txt
+docker-compose -f docker/simle_url_checker/docker-compose.yml up -d
 url_checker.py ~/Downloads/journal_info.csv
 ```
 
