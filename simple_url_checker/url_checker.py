@@ -12,15 +12,21 @@ from seleniumwire.webdriver import DesiredCapabilities
 path_driver = None
 
 
-def get_driver(path_chrome_driver=None):
+def get_driver(path_chrome_driver=None, user_agent=''):
+    options = webdriver.ChromeOptions()
+
+    # set user agent
+    if user_agent == '':
+        user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+    if user_agent:
+        options.add_argument(f'--user-agent={user_agent}')
+
     if path_chrome_driver:
         # run selenium with your local browser
-        options = webdriver.ChromeOptions()
         options.add_argument('--start-maximized')  # maximize browser window
         browser_driver = webdriver.Chrome(path_chrome_driver, options=options)
     else:
         # run selenium with docker remote browser
-        options = webdriver.ChromeOptions()
         options.add_argument("no-sandbox")
         options.add_argument("--disable-gpu")
         options.add_argument("--window-size=800,600")
@@ -34,11 +40,6 @@ def get_driver(path_chrome_driver=None):
             }
         )
 
-    # change user agent to avoid human detection from cloudflare
-    browser_driver.execute_cdp_cmd('Network.setUserAgentOverride', {
-        "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/101.0.4951.44 Mobile/15E148 Safari/604.1",
-        "platform": "Windows"
-    })
     return browser_driver
 
 
