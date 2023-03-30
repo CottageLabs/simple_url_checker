@@ -101,8 +101,15 @@ ulimit -n 50000
 
 
 
-TODO
+TODO or to be improved
 ----------------
 
 * fix url_checker throw selenium exception if n_thread > 40, it could be docker config issue
+* selenium sometime return timeout
+* selenium sometime can't create new session, only restart docker can fix it
+```shell
+Message: Could not start a new session. Error while creating session with the driver service. Stopping driver service: Could not start a new session. Response code 500. Message: unknown error: Chrome failed to start: exited abnormally.
+```
+* some request could be run by `requests` instead of selenium, it could be faster
+* add db to cache result can improve performance
 
