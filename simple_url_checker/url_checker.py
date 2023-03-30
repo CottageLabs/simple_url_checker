@@ -2,6 +2,7 @@ import argparse
 import csv
 import dataclasses
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Iterable
@@ -13,6 +14,8 @@ from simple_url_checker import thread_utils
 
 # path_driver = '/home/kk/app/chromedriver'
 path_driver = None
+
+log = logging.getLogger(__name__)
 
 
 def get_driver(path_chrome_driver=None, user_agent=''):
@@ -49,11 +52,11 @@ def get_driver(path_chrome_driver=None, user_agent=''):
 @dataclasses.dataclass
 class UrlResult:
     src_url: str
-    src_status_code: int | None
-    n_sub_req: int
-    final_url: str
-    final_status_code: int | None
-    resp_content_len: int
+    src_status_code: int = None
+    n_sub_req: int = None
+    final_url: str = None
+    final_status_code: int = None
+    resp_content_len: int = None
     sub_requests: list['SubRequestResult'] = dataclasses.field(default_factory=list)
 
 
@@ -67,34 +70,42 @@ class SubRequestResult:
 
 def load_url_result(url: str) -> UrlResult:
     print(f'load_url_result({url})')
-    driver = get_driver(path_driver)
-    driver.get(url)
-    sub_requests = []
-    src_status_code = None
-    final_status_code = None
-    for r in driver.requests:
-        resp_code = r.response.status_code if r.response else None
-        sub_requests.append(SubRequestResult(url=r.url,
-                                             status_code=resp_code,
-                                             resp_content_len=len(r.response.body) if r.response else 0,
-                                             headers=r.response and dict(r.response.headers),
-                                             ))
+    driver = None
+    try:
+        driver = get_driver(path_driver)
+        driver.get(url)
+        sub_requests = []
+        src_status_code = None
+        final_status_code = None
+        for r in driver.requests:
+            resp_code = r.response.status_code if r.response else None
+            sub_requests.append(SubRequestResult(url=r.url,
+                                                 status_code=resp_code,
+                                                 resp_content_len=len(r.response.body) if r.response else 0,
+                                                 headers=r.response and dict(r.response.headers),
+                                                 ))
 
-        if r.url == url or r.url == url + '/':
-            src_status_code = resp_code
-        if driver.current_url == r.url:
-            final_status_code = resp_code
+            if r.url == url or r.url == url + '/':
+                src_status_code = resp_code
+            if driver.current_url == r.url:
+                final_status_code = resp_code
 
-    url_result = UrlResult(src_url=url,
-                           src_status_code=src_status_code,
-                           n_sub_req=len(driver.requests),
-                           final_url=driver.current_url,
-                           final_status_code=final_status_code,
-                           resp_content_len=len(driver.page_source),
-                           sub_requests=sub_requests,
-                           )
+        url_result = UrlResult(src_url=url,
+                               src_status_code=src_status_code,
+                               n_sub_req=len(driver.requests),
+                               final_url=driver.current_url,
+                               final_status_code=final_status_code,
+                               resp_content_len=len(driver.page_source),
+                               sub_requests=sub_requests,
+                               )
+    except Exception as e:
+        log.error('something wrong when get url result with selenium')
+        log.exception(e)
+        url_result = UrlResult(src_url=url)
+    finally:
+        if driver:
+            driver.quit()
 
-    driver.quit()
     return url_result
 
 
