@@ -82,3 +82,27 @@ Cases to be study
 }
 ```
 
+
+Other
+-----
+
+sometime seleniumwire could throw following exception if n_thread too large
+
+```shell
+OSError: [Errno 24] Too many open files: '/tmp/.seleniumwire/storage-0e072dbd-edf6-41c1-9922-579daa4ab194/request-c5ee580a-29f7-429c-9048
+```
+
+you can fix it by
+
+```shell
+ulimit -n 50000
+```
+
+
+
+
+TODO
+----------------
+
+* fix url_checker throw selenium exception if n_thread > 40, it could be docker config issue
+

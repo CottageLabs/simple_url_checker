@@ -1,12 +1,15 @@
-import csv
 import argparse
+import csv
 import dataclasses
 import json
+import time
 from pathlib import Path
 from typing import Iterable
 
 from seleniumwire import webdriver
 from seleniumwire.webdriver import DesiredCapabilities
+
+from simple_url_checker import thread_utils
 
 # path_driver = '/home/kk/app/chromedriver'
 path_driver = None
@@ -62,47 +65,56 @@ class SubRequestResult:
     headers: dict
 
 
-def load_url_results(urls: Iterable[str]) -> Iterable[UrlResult]:
-    for url in urls:
-        driver = get_driver(path_driver)
-        driver.get(url)
-        sub_requests = []
-        src_status_code = None
-        final_status_code = None
-        for r in driver.requests:
-            resp_code = r.response.status_code if r.response else None
-            sub_requests.append(SubRequestResult(url=r.url,
-                                                 status_code=resp_code,
-                                                 resp_content_len=len(r.response.body) if r.response else 0,
-                                                 headers=r.response and dict(r.response.headers),
-                                                 ))
+def load_url_result(url: str) -> UrlResult:
+    print(f'load_url_result({url})')
+    driver = get_driver(path_driver)
+    driver.get(url)
+    sub_requests = []
+    src_status_code = None
+    final_status_code = None
+    for r in driver.requests:
+        resp_code = r.response.status_code if r.response else None
+        sub_requests.append(SubRequestResult(url=r.url,
+                                             status_code=resp_code,
+                                             resp_content_len=len(r.response.body) if r.response else 0,
+                                             headers=r.response and dict(r.response.headers),
+                                             ))
 
-            if r.url == url or r.url == url + '/':
-                src_status_code = resp_code
-            if driver.current_url == r.url:
-                final_status_code = resp_code
+        if r.url == url or r.url == url + '/':
+            src_status_code = resp_code
+        if driver.current_url == r.url:
+            final_status_code = resp_code
 
-        url_result = UrlResult(src_url=url,
-                               src_status_code=src_status_code,
-                               n_sub_req=len(driver.requests),
-                               final_url=driver.current_url,
-                               final_status_code=final_status_code,
-                               resp_content_len=len(driver.page_source),
-                               sub_requests=sub_requests,
-                               )
+    url_result = UrlResult(src_url=url,
+                           src_status_code=src_status_code,
+                           n_sub_req=len(driver.requests),
+                           final_url=driver.current_url,
+                           final_status_code=final_status_code,
+                           resp_content_len=len(driver.page_source),
+                           sub_requests=sub_requests,
+                           )
 
-        driver.quit()
-        yield url_result
+    driver.quit()
+    return url_result
+
+
+def load_url_results(urls: Iterable[str], n_thread=40) -> Iterable[UrlResult]:
+    return thread_utils.yield_run_fn_results(load_url_result, zip(urls), n_thread=n_thread)
+    # for url in urls:
+    #     yield load_url_result(url)
 
 
 def main():
+    start_time = time.time()
     parser = argparse.ArgumentParser(description="Simple URL checker")
     parser.add_argument('csv_path', type=str, help='Path to CSV file')
+    parser.add_argument('-t', '--thread', type=int, default=10, help='Number of threads')
     # args = parser.parse_args(['/home/kk/Downloads/journal_info.csv'])
     args = parser.parse_args()
 
     urls = (row[1] for row in csv.reader(Path(args.csv_path).open('r')))
     next(urls)  # drop header
+    # urls = itertools.islice(urls, 100)
     # urls = ['https://journals.sagepub.com/home/mac']
     # urls = [
     #     'https://www.google.com',
@@ -110,12 +122,24 @@ def main():
     #     'https://www.yahoo.com',
     # ]
 
-    for url_result in load_url_results(urls):
-        url_result.sub_requests = []
-        result_dict = dataclasses.asdict(url_result)
-        if 'sub_requests' in result_dict:
-            del result_dict['sub_requests']
-        print(json.dumps(result_dict, indent=4))
+    n_url = 0
+    with open('url_checker_results.csv', 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=[
+            f.name for f in dataclasses.fields(UrlResult) if f.name not in ['sub_requests']
+        ])
+        writer.writeheader()
+
+        for url_result in load_url_results(urls, n_thread=args.thread):
+            n_url += 1
+            url_result.sub_requests = []
+            result_dict = dataclasses.asdict(url_result)
+            if 'sub_requests' in result_dict:
+                del result_dict['sub_requests']
+
+            print(json.dumps(result_dict, indent=4))
+            writer.writerow(result_dict)
+
+    print(f'done -- [{n_url}][{time.time() - start_time}]')
 
 
 def main2():
@@ -126,4 +150,4 @@ def main2():
 
 
 if __name__ == '__main__':
-    main2()
+    main()
