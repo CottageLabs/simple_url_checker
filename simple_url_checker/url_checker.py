@@ -23,7 +23,9 @@ def get_driver(path_chrome_driver=None, user_agent=''):
 
     # set user agent
     if user_agent == '':
-        user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+        # user_agent = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/101.0.4951.44 Mobile/15E148 Safari/604.1"
+        user_agent = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0'
+
     if user_agent:
         options.add_argument(f'--user-agent={user_agent}')
 
@@ -71,6 +73,7 @@ class SubRequestResult:
 def load_url_result(url: str) -> UrlResult:
     print(f'load_url_result({url})')
     driver = None
+    url_result = UrlResult(src_url=url)
     try:
         driver = get_driver(path_driver)
         driver.get(url)
@@ -101,10 +104,12 @@ def load_url_result(url: str) -> UrlResult:
     except Exception as e:
         log.error('something wrong when get url result with selenium')
         log.exception(e)
-        url_result = UrlResult(src_url=url)
     finally:
         if driver:
-            driver.quit()
+            try:
+                driver.quit()
+            except:
+                pass
 
     return url_result
 
@@ -161,4 +166,4 @@ def main2():
 
 
 if __name__ == '__main__':
-    main()
+    main2()
