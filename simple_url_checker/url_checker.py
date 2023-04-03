@@ -120,7 +120,7 @@ def load_url_results(urls: Iterable[str], n_thread=40) -> Iterable[UrlResult]:
     #     yield load_url_result(url)
 
 
-def main():
+def main(urls=None):
     start_time = time.time()
     parser = argparse.ArgumentParser(description="Simple URL checker")
     parser.add_argument('csv_path', type=str, help='Path to CSV file')
@@ -128,9 +128,11 @@ def main():
     # args = parser.parse_args(['/home/kk/Downloads/journal_info.csv'])
     args = parser.parse_args()
 
-    urls = (row[1] for row in csv.reader(Path(args.csv_path).open('r')))
-    next(urls)  # drop header
-    # urls = itertools.islice(urls, 100)
+    if urls is None:
+        urls = (row[1] for row in csv.reader(Path(args.csv_path).open('r')))
+        next(urls)  # drop header
+        # urls = itertools.islice(urls, 100)
+
     # urls = ['https://journals.sagepub.com/home/mac']
     # urls = [
     #     'https://www.google.com',
@@ -165,5 +167,20 @@ def main2():
     sleep(100)
 
 
+def main3():
+    # url = 'http://journal.unpar.ac.id/index.php/jrsi/index'
+    # url = 'https://www.scielo.br/j/his/'
+    # url = 'https://educacaoemfoco.ufjf.emnuvens.com.br/'
+    # url = 'https://siaiap32.univali.br/seer/index.php/rtva'
+
+    # url = 'http://bosniaca.nub.ba/index.php/bosniaca/index'
+    url = 'http://www.karger.com/ofa'
+    # global path_driver
+    # path_driver = '/home/kk/app/chromedriver'
+    result = load_url_result(url)
+    print(result)
+
+
 if __name__ == '__main__':
     main()
+    # main3()
