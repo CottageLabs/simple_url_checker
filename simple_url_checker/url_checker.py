@@ -120,6 +120,30 @@ def load_url_results(urls: Iterable[str], n_thread=40) -> Iterable[UrlResult]:
     #     yield load_url_result(url)
 
 
+def get_urls_from_journal_info_csv(csv_path) -> Iterable[str]:
+    urls = (row[1] for row in csv.reader(Path(csv_path).open('r')))
+    next(urls)  # drop header
+    return urls
+
+def create_url_result_csv(url_results: Iterable[UrlResult], csv_path):
+    n_url = 0
+    with open(csv_path, 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=[
+            f.name for f in dataclasses.fields(UrlResult) if f.name not in ['sub_requests']
+        ])
+        writer.writeheader()
+
+        for url_result in url_results:
+            n_url += 1
+            url_result.sub_requests = []
+            result_dict = dataclasses.asdict(url_result)
+            if 'sub_requests' in result_dict:
+                del result_dict['sub_requests']
+
+            print(json.dumps(result_dict, indent=4))
+            writer.writerow(result_dict)
+    return n_url
+
 def main(urls=None):
     start_time = time.time()
     parser = argparse.ArgumentParser(description="Simple URL checker")
@@ -129,8 +153,7 @@ def main(urls=None):
     args = parser.parse_args()
 
     if urls is None:
-        urls = (row[1] for row in csv.reader(Path(args.csv_path).open('r')))
-        next(urls)  # drop header
+        urls = get_urls_from_journal_info_csv(args.csv_path)
         # urls = itertools.islice(urls, 100)
 
     # urls = ['https://journals.sagepub.com/home/mac']
@@ -140,23 +163,7 @@ def main(urls=None):
     #     'https://www.yahoo.com',
     # ]
 
-    n_url = 0
-    with open('url_checker_results.csv', 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=[
-            f.name for f in dataclasses.fields(UrlResult) if f.name not in ['sub_requests']
-        ])
-        writer.writeheader()
-
-        for url_result in load_url_results(urls, n_thread=args.thread):
-            n_url += 1
-            url_result.sub_requests = []
-            result_dict = dataclasses.asdict(url_result)
-            if 'sub_requests' in result_dict:
-                del result_dict['sub_requests']
-
-            print(json.dumps(result_dict, indent=4))
-            writer.writerow(result_dict)
-
+    n_url = create_url_result_csv(load_url_results(urls, n_thread=args.thread), 'url_checker_results.csv')
     print(f'done -- [{n_url}][{time.time() - start_time}]')
 
 

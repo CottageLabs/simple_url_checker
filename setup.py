@@ -17,6 +17,7 @@ setup(
     ],
     install_requires=[
         'selenium~=4.7.0',
-        'selenium-wire~=5.1.0'
+        'selenium-wire~=5.1.0',
+        'requests',
     ],
 )
